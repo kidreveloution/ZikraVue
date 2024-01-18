@@ -65,12 +65,12 @@ export default {
                     "zikra_main":process.env.VUE_APP_ZIKRA_API_KEY
                 },
                 data: {
-                "ne_lat": bounds.getNorthEast().lat(),
-                "ne_long": bounds.getNorthEast().lng(),
-                "sw_lat": bounds.getSouthWest().lat(),
-                "sw_long": bounds.getSouthWest().lng(),
-                "center_lat": bounds.getCenter().lat(),
-                "center_long": bounds.getCenter().lng(),
+                    "ne_lat": bounds.getNorthEast().lat(),
+                    "ne_long": bounds.getNorthEast().lng(),
+                    "sw_lat": bounds.getSouthWest().lat(),
+                    "sw_long": bounds.getSouthWest().lng(),
+                    "center_lat": bounds.getCenter().lat(),
+                    "center_long": bounds.getCenter().lng(),
                 },
                 success: (events) => {
                     this.update_pikaday(events);

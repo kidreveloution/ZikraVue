@@ -105,7 +105,7 @@
       async _populateMemories(res) {
         const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
         var memory;
-
+        res = JSON.parse(res)
         for (memory in res) {
             if (res[memory].length > 1) {
                 console.log("Shared Memory");

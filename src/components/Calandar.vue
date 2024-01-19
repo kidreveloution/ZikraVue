@@ -17,7 +17,7 @@ export default {
         }
     },
     mounted() {
-        this.picker = this.initializePikaday(new Date('7-Oct-2023'));
+        this.picker = this.initializePikaday('7-Oct-2023');
     },
     computed:{
         watch_bounds () {

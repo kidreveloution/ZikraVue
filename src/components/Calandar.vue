@@ -8,6 +8,7 @@
 import Pikaday from "pikaday";
 import "pikaday/css/pikaday.css"; // Import Pikaday CSS
 import $ from 'jquery';
+console.log('API Key:', process.env.VUE_APP_ZIKRA_API_KEY);
 
 export default {
     name: "PikadayComponent",

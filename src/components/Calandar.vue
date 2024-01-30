@@ -35,9 +35,6 @@ export default {
         initializePikaday(init_date) {
             this.$picker = new Pikaday({
                 field: document.getElementById("datepicker"),
-                // onSelect: (date) => {
-                //     const showDate = date.toISOString(); 
-                // },
             });
             this.$picker.setDate(new Date(init_date));
             this.$store.dispatch('showDate/setShowDate', init_date);
@@ -51,6 +48,7 @@ export default {
                 field: document.getElementById('datepicker'),
                 onSelect: (date) => {
                     const showDate = date.toISOString();
+                    console.log(showDate)
                     this.$store.dispatch('showDate/setShowDate', showDate); // Dispatch action
                 },
                 events: events

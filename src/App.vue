@@ -2,18 +2,21 @@
   <div id="app">
     <GoogleMap />
     <Calandar />
+    <Timeline />
   </div>
 </template>
 
 <script>
 import GoogleMap from './components/GoogleMap.vue';
 import Calandar from './components/Calandar.vue';
+import Timeline from './components/Timeline.vue';
 
 export default {
   name: 'App',
   components: {
     GoogleMap,
     Calandar,
+    Timeline,
   },
 };
 </script>

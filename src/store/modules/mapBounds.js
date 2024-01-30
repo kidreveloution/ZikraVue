@@ -17,6 +17,7 @@ export default {
     getters: {
       // Getter to access the bounds state
       getBounds(state) {
+        
         return state.bounds;
       }
     }

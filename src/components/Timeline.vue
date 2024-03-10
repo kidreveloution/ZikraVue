@@ -5,9 +5,9 @@
         <li v-for="(tick, index) in formatted_ticks" :key="tick" :style="{left: `${index / (formatted_ticks.length - 1) * 100}%`}">{{ tick }}</li>
       </ul>
     </div>
-  </template>
+</template>
   
-  <script>
+<script>
   import $ from 'jquery';
 
   export default {

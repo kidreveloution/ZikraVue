@@ -60,7 +60,6 @@
                 },
                 success: (events) => {
                     this.formatted_ticks = this.convertDates(events)
-                    console.log(events)
                     this.internalTicks = events
                 },
                 error: (err) => {

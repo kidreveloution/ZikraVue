@@ -84,7 +84,7 @@
   .slider-container {
     position: relative; /* Keep as relative or absolute as per your layout */
     z-index: 9999; /* Ensures it stays on top */
-    width: 50%; /* Adjust to desired width, e.g., 50% for half-width */
+    width: 80%; /* Adjust to desired width, e.g., 50% for half-width */
     margin: 0 auto; /* Centers the slider */
     top: -100px; /* Adjust as needed */
     padding: 0;

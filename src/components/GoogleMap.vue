@@ -1,8 +1,17 @@
 
 
 <template>
-    <div id="map" style="width: 100%; height: 100vh;"></div>
-  </template>
+
+  <div id="map" style="width: 100%; height: 100vh;"></div>
+  <div id="memoryBoxTitle">
+    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">Memories on this date, but unknown location</h2>
+    </div>
+  <div id="memoryBox" class="memoryBox">
+      <table id="memoryTable">
+        <!-- Dynamic rows will be added here -->
+    </table>
+</div>
+</template>
   
   <script>
 
@@ -80,12 +89,12 @@
         });
       },
       updatePikadayWithNewEvents() {
-        // Your implementation of updatePikadayWithNewEvents
         this._getBounds()
 
       },
       showAllMemories(timestamp) {
-        
+        this.clearTableRows('memoryTable');
+
         var dataStruct = {
             "timestamp": timestamp,
         };
@@ -103,26 +112,38 @@
         });
       },
       async _populateMemories(res) {
-        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
         var memory;
+        var is_precise_flag;
+        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+        // Google Maps API not loaded yet, wait for a bit and then try again
+            setTimeout(() => this._populateMemories(res), 1000); // Wait for 1 second before retrying
+            return;
+        }
+        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
         res = JSON.parse(res)
         for (memory in res) {
-            if (res[memory].length > 1) {
-                console.log("Shared Memory");
-                var sharedObject = this._formatSharedMemories(res[memory])
-                this.createSharedMemoryMarker(sharedObject)
-            } else {
-                    const markerElement = new AdvancedMarkerElement({
-                    map: this.map,
-                    content: this.buildContent(res[memory][0]),
-                    position: new google.maps.LatLng(res[memory][0]["lat"], res[memory][0]["lon"]),
-                    title: res[memory]["title"],
-                });
-                this.markersArray.push(markerElement);
+            is_precise_flag = res[memory][0]['is_precise']
+            
+            if (is_precise_flag == "false"){ // These memories need to go into memory box, and thats it
+              this._populateMemoryBox(res[memory])
+              
+            }else{
+              if (res[memory].length > 1) {
+                  var sharedObject = this._formatSharedMemories(res[memory])
+                  this.createSharedMemoryMarker(sharedObject)
+              } else {
+                      const markerElement = new AdvancedMarkerElement({
+                      map: this.map,
+                      content: this.buildContent(res[memory][0]),
+                      position: new google.maps.LatLng(res[memory][0]["lat"], res[memory][0]["lon"]),
+                      title: res[memory]["title"],
+                  });
+                  this.markersArray.push(markerElement);
 
-                markerElement.addListener("click", () => {
-                    this.toggleHighlight(markerElement); // Assuming toggleHighlight is a method of the component
-                });
+                  markerElement.addListener("click", () => {
+                      this.toggleHighlight(markerElement); // Assuming toggleHighlight is a method of the component
+                  });
+              }
             }
         }
       },
@@ -249,15 +270,104 @@
             this.toggleHighlight(AdvancedMarkerElement);
             });
 
+      },
+      _populateMemoryBox(memory) {
+    var table = document.getElementById("memoryTable");
+    
+    var newRow = table.insertRow(-1); // Add the row at the end of the table
+    var newCell = newRow.insertCell(0); // Add a new cell to the row
+
+    // Create a container div inside the cell for better control of layout
+    const containerDiv = document.createElement("div");
+    containerDiv.className = "memory-container";
+
+    containerDiv.innerHTML = `
+        <div class="icon">
+            <i aria-hidden="true" title="${memory[0]["title"]}"></i>
+            <div class="smaller-font">
+              <div class="title"><strong>${memory[0].title}</strong></div>
+              <div class="description">${memory[0].descx}</div>
+              <div class="features">
+                  <a href="${memory[0].link}" target="_blank">
+                      <i aria-hidden="true" class="fa fa-link fa-lg link"></i>
+                      <span>View Memory</span>
+                  </a>
+              </div>
+          </div>
+
+    `;
+
+    newCell.appendChild(containerDiv);
+      },
+      clearTableRows(tableId) {
+        var table = document.getElementById(tableId);
+        if (!table) {
+            return;
         }
 
-
+        // Loop to remove each row from the table
+        while (table.rows.length > 0) {
+            table.deleteRow(0);
+        }
+      }
     }
   }
 
   </script>
   
   <style>
+  .smaller-font {
+    font-size: small; /* Or any specific size you prefer */
+  }
+
+  #memoryBox {
+    border: 2px solid lightblue;
+    background-color: white;
+    padding: 20px;
+    width: 10%;
+    margin: 20px auto;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+
+    display: flex;
+    position: absolute;
+    top: 130px;
+    /* Adjust as needed to place it at the desired location on the map */
+    right: 10px;
+    /* Adjust as needed */
+    z-index: 10;
+    /* Ensures it appears above the map */
+    font-family: 'Arial', sans-serif;
+  }
+  #memoryBoxTitle {
+    border: 2px solid lightblue;
+    background-color: white;
+    padding: 20px;
+    width: 10%;
+    margin: 10px auto;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+
+    position: absolute;
+    top: 50px;
+    /* Adjust as needed to place it at the desired location on the map */
+    right: 10px;
+    /* Adjust as needed */
+    z-index: 11;
+    /* Ensures it appears above the map */
+    font-family: 'Arial', sans-serif;
+    font-size: 200px;
+  }
+
+
+  #memoryTable tr:nth-child(even) {
+      background-color: #f2f2f2;
+  }
+
+  #memoryTable tr:hover {
+      background-color: #ddd;
+  }
+
+
+
   :root {
   --building-color: #FF9800;
   --house-color: #0288D1;
@@ -365,6 +475,7 @@ body {
 /*
  * Property styles in highlighted state.
  */
+ 
 .property.highlight {
   background-color: #FFFFFF;
   border-radius: 8px;

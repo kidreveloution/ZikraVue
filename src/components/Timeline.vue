@@ -5,9 +5,9 @@
         <li v-for="(tick, index) in formatted_ticks" :key="tick" :style="{left: `${index / (formatted_ticks.length - 1) * 100}%`}">{{ tick }}</li>
       </ul>
     </div>
-  </template>
+</template>
   
-  <script>
+<script>
   import $ from 'jquery';
 
   export default {
@@ -60,7 +60,6 @@
                 },
                 success: (events) => {
                     this.formatted_ticks = this.convertDates(events)
-                    console.log(events)
                     this.internalTicks = events
                 },
                 error: (err) => {
@@ -85,7 +84,7 @@
   .slider-container {
     position: relative; /* Keep as relative or absolute as per your layout */
     z-index: 9999; /* Ensures it stays on top */
-    width: 50%; /* Adjust to desired width, e.g., 50% for half-width */
+    width: 80%; /* Adjust to desired width, e.g., 50% for half-width */
     margin: 0 auto; /* Centers the slider */
     top: -100px; /* Adjust as needed */
     padding: 0;

@@ -4,8 +4,8 @@
 
   <div id="map" style="width: 100%; height: 100vh;"></div>
   <div id="memoryBoxTitle">
-    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue;">More Memories in Area</h2>
-  </div>
+    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">More Memories on this date</h2>
+    </div>
   <div id="memoryBox" class="memoryBox">
       <table id="memoryTable">
         <!-- Dynamic rows will be added here -->

@@ -4,7 +4,7 @@
 
   <div id="map" style="width: 100%; height: 100vh;"></div>
   <div id="memoryBoxTitle">
-    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">More Memories on this date</h2>
+    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">Memories on this date, but unknown location</h2>
     </div>
   <div id="memoryBox" class="memoryBox">
       <table id="memoryTable">
@@ -330,7 +330,7 @@
 
     display: flex;
     position: absolute;
-    top: 110px;
+    top: 130px;
     /* Adjust as needed to place it at the desired location on the map */
     right: 10px;
     /* Adjust as needed */

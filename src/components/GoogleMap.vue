@@ -1,378 +1,383 @@
 
 
 <template>
-
-  <div id="map" style="width: 100%; height: 100vh;"></div>
-  <div id="memoryBoxTitle">
-    <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">Memories on this date, but unknown location</h2>
+  <div>
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <div v-if="!isMobile" id="memoryBoxTitle">
+      <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">Memories on this date, but unknown location</h2>
     </div>
-  <div id="memoryBox" class="memoryBox">
+    <div v-if="!isMobile" id="memoryBox" class="memoryBox">
       <table id="memoryTable">
         <!-- Dynamic rows will be added here -->
-    </table>
-</div>
+      </table>
+    </div>
+  </div>
 </template>
-  
-  <script>
 
-  /* global google */
-  import $ from 'jquery';
+<script>
+/* global google */
+import $ from 'jquery';
 
+export default {
+  name: 'GoogleMap',
+  props: {
+    isMobile: {
+      type: Boolean,
+      default: false
+    }
+  },
+  mounted() {
+    this.initMap();
+  },
+  setup() {
+    return {
+      map: null,
+      markersArray: []
+    }
+  },
+  computed:{
+    watch_date () {
+      return this.$store.state.showDate.showDate
+    },
+  },
+  watch:
+  {
+    watch_date(newDate){
+      this.hideMarkers()
+      this.showAllMemories(newDate)
+    }
+  },
+  methods: {
+    initMap() {
+      // Check if the Google Maps script is already loaded
+      if (typeof google === 'undefined') {
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=`+process.env.VUE_APP_GOOGLE_MAPS_KEY+`&callback=initMap`;
+        script.async = true;
+        script.defer = true;
+        window.initMap = this.loadMap;
+        document.head.appendChild(script);
+      } else {
+        // If Google Maps is already loaded, directly call loadMap
+        this.loadMap();
+      }
+    },
+    loadMap() {  
+      this.map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 10,
+        mapId: 'bc55fc2e7ebbdda0',
+        center: { lat: 31.476737, lng: 34.4813380 }, 
+        streetViewControl: false,
+        disableDefaultUI: false});
 
-  export default {
-    name: 'GoogleMap',
-    mounted() {
-      this.initMap();
+        google.maps.event.addListener(this.map, 'idle', this.updatePikadayWithNewEvents);
     },
-    setup() {
-        return {
-            map: null,
-            markersArray: []
-        }
-    },
-    computed:{
-        watch_date () {
-            return this.$store.state.showDate.showDate
-        },
-    },
-    watch:
-    {
-        watch_date(newDate){
-            this.hideMarkers()
-            this.showAllMemories(newDate)
-        }
-    },
-    methods: {
-      initMap() {
-        // Check if the Google Maps script is already loaded
-        if (typeof google === 'undefined') {
-          const script = document.createElement('script');
-          script.src = `https://maps.googleapis.com/maps/api/js?key=`+process.env.VUE_APP_GOOGLE_MAPS_KEY+`&callback=initMap`;
-          script.async = true;
-          script.defer = true;
-          window.initMap = this.loadMap;
-          document.head.appendChild(script);
-        } else {
-          // If Google Maps is already loaded, directly call loadMap
-          this.loadMap();
-        }
-      },
-      loadMap() {  
-        this.map = new google.maps.Map(document.getElementById('map'), {
-          zoom: 10,
-          mapId: 'bc55fc2e7ebbdda0',
-          center: { lat: 31.476737, lng: 34.4813380 }, 
-          streetViewControl: false,
-          disableDefaultUI: false});
-
-          google.maps.event.addListener(this.map, 'idle', this.updatePikadayWithNewEvents);
-      },
-      _getBounds() {
-        return new Promise((resolve, reject) => {
-          if (this.map) {
-            if (this.map.getBounds()) {
-              // If bounds are already available, resolve immediately
+    _getBounds() {
+      return new Promise((resolve, reject) => {
+        if (this.map) {
+          if (this.map.getBounds()) {
+            // If bounds are already available, resolve immediately
+            const bounds = this.map.getBounds();
+            this.$store.dispatch('mapBounds/setBounds', bounds); // Dispatch action
+            resolve(bounds);
+          } else {
+            // Wait for the 'idle' event if bounds are not available
+            google.maps.event.addListenerOnce(this.map, 'idle', () => {
               const bounds = this.map.getBounds();
               this.$store.dispatch('mapBounds/setBounds', bounds); // Dispatch action
               resolve(bounds);
-            } else {
-              // Wait for the 'idle' event if bounds are not available
-              google.maps.event.addListenerOnce(this.map, 'idle', () => {
-                const bounds = this.map.getBounds();
-                this.$store.dispatch('mapBounds/setBounds', bounds); // Dispatch action
-                resolve(bounds);
-              });
-            }
-          } else {
-            reject(new Error("Map is not initialized"));
-          }
-        });
-      },
-      updatePikadayWithNewEvents() {
-        this._getBounds()
-
-      },
-      showAllMemories(timestamp) {
-        this.clearTableRows('memoryTable');
-
-        var dataStruct = {
-            "timestamp": timestamp,
-        };
-
-        $.ajax({
-            url: process.env.VUE_APP_ZIKRA_API_SHOW_ALL_MEM,
-            headers:{
-                    "zikra_main":process.env.VUE_APP_ZIKRA_API_KEY
-            },
-            type: "GET",
-            data: dataStruct,
-            success: (res) => { // Changed to arrow function
-                this._populateMemories(res);
-            }
-        });
-      },
-      async _populateMemories(res) {
-        var memory;
-        var is_precise_flag;
-        if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-        // Google Maps API not loaded yet, wait for a bit and then try again
-            setTimeout(() => this._populateMemories(res), 1000); // Wait for 1 second before retrying
-            return;
-        }
-        const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
-        res = JSON.parse(res)
-        for (memory in res) {
-            is_precise_flag = res[memory][0]['is_precise']
-            
-            if (is_precise_flag == "false"){ // These memories need to go into memory box, and thats it
-              this._populateMemoryBox(res[memory])
-              
-            }else{
-              if (res[memory].length > 1) {
-                  var sharedObject = this._formatSharedMemories(res[memory])
-                  this.createSharedMemoryMarker(sharedObject)
-              } else {
-                      const markerElement = new AdvancedMarkerElement({
-                      map: this.map,
-                      content: this.buildContent(res[memory][0]),
-                      position: new google.maps.LatLng(res[memory][0]["lat"], res[memory][0]["lon"]),
-                      title: res[memory]["title"],
-                  });
-                  this.markersArray.push(markerElement);
-
-                  markerElement.addListener("click", () => {
-                      this.toggleHighlight(markerElement); // Assuming toggleHighlight is a method of the component
-                  });
-              }
-            }
-        }
-      },
-      buildContent(memory) {
-        const content = document.createElement("div");
-        content.style.borderColor = "#d32121"; // Set the border color
-        content.style.borderWidth = "2px"; // Set the border width
-        content.style.borderStyle = "solid"; // Set the border style
-        content.classList.add("property");
-        content.innerHTML = `
-          <div class="icon">
-              <i aria-hidden="true" class="fa-solid ${memory["icon"]}" title="${memory["title"]}"></i>
-          </div>
-            <div class="details">
-                <div class="price">${memory.title}</div>
-                <div class="address">${memory.descx}</div>
-                <div class="features">
-                <div>
-                  <a href="${memory.link}" target="_blank">
-                    <i aria-hidden="true" class="fa fa-link fa-lg link" title="bedroom"></i>
-                    <span class="fa-sr-only">bedroom</span>
-                    <span>View Memory</span>
-                    </a>
-                </div>
-              </div>
-            `;
-        return content;
-      },
-      toggleHighlight(markerView) {
-        if (markerView.content.classList.contains("highlight")) {
-          markerView.content.classList.remove("highlight");
-          markerView.zIndex = null;
-        } else {
-          markerView.content.classList.add("highlight");
-          markerView.zIndex = 1;
-        }
-      },
-      setMapOnAll(map) {
-        for (let i = 0; i < this.markersArray.length; i++) {
-          this.markersArray[i].setMap(map);
-        }
-      },
-      hideMarkers() {
-        this.setMapOnAll(null);
-      },
-      buildSharedContent(memories){
-        const content = document.createElement("div");
-
-        content.style.borderColor = "#d32121"; // Set the border color
-        content.style.borderWidth = "2px"; // Set the border width
-        content.style.borderStyle = "solid"; // Set the border style
-        content.classList.add("property");
-        var linkContent = this.buildLinks(memories["links"])
-        content.innerHTML = `
-          <div class="icon">
-              <i aria-hidden="true" class="fa-solid ${memories["icon"]}" title="${memories["title"]}"></i>
-          </div>
-            <div class="details" >
-                <div class="price">${memories.title}</div>
-                <div class="address">${memories.titles}</div>
-                <div class="features">${linkContent}</div>
-            </div>
-          </div>     
-            `;
-        return content;
-
-      },
-      buildLinks(links){
-        // Assuming memories.links is an array of URLs
-
-        // Initialize an empty string to hold the HTML
-        let htmlContent = '';
-
-        // Iterate over each link and append the HTML string for each link
-        links.forEach(link => {
-            htmlContent += `
-            <div style="display: inline-block; padding: 10px; margin-right: 10px;">
-                    <a href="${link}" target="_blank">
-                        <i aria-hidden="true" class="fa fa-link fa-lg link" title="bedroom"></i>
-                        <span class="fa-sr-only">bedroom</span>
-                        <span>View Memory</span>
-                    </a>
-                </div>
-            `;
-        });
-
-        return htmlContent;
-      },
-      _formatSharedMemories(sharedMemory){
-          var titles=[]
-          var memory
-          var links=[]
-          var ids=[]
-          var icon='fa-solid fa-user-group'
-          for (memory in sharedMemory){
-              titles.push(sharedMemory[memory]["title"])
-              links.push(sharedMemory[memory]["link"])
-              ids.push(sharedMemory[memory]["id"])
-          }
-
-          var retunedObject = {
-              "icon": icon,
-              "title": "Shared Memories in "+sharedMemory[0]["location"],
-              "titles": titles,
-              "links": links,
-              "ids": ids,
-              "lat": sharedMemory[0]["lat"],
-              "lon": sharedMemory[0]["lon"],
-              "timestamp": sharedMemory[0]["timestamp"],
-          }
-          return retunedObject
-
-      },
-      createSharedMemoryMarker(sharedObject){
-        const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
-                map: this.map,
-                content: this.buildSharedContent(sharedObject),
-                position: { lat: sharedObject["lat"], lng: sharedObject["lon"] },
-                title: sharedObject["title"],
-            })
-            this.markersArray.push(AdvancedMarkerElement)
-
-            AdvancedMarkerElement.addListener("click", () => {
-            this.toggleHighlight(AdvancedMarkerElement);
             });
+          }
+        } else {
+          reject(new Error("Map is not initialized"));
+        }
+      });
+    },
+    updatePikadayWithNewEvents() {
+      this._getBounds()
 
-      },
-      _populateMemoryBox(memory) {
-    var table = document.getElementById("memoryTable");
-    
-    var newRow = table.insertRow(-1); // Add the row at the end of the table
-    var newCell = newRow.insertCell(0); // Add a new cell to the row
+    },
+    showAllMemories(timestamp) {
+      this.clearTableRows('memoryTable');
 
-    // Create a container div inside the cell for better control of layout
-    const containerDiv = document.createElement("div");
-    containerDiv.className = "memory-container";
+      var dataStruct = {
+          "timestamp": timestamp,
+      };
 
-    containerDiv.innerHTML = `
+      $.ajax({
+          url: process.env.VUE_APP_ZIKRA_API_SHOW_ALL_MEM,
+          headers:{
+                  "zikra_main":process.env.VUE_APP_ZIKRA_API_KEY
+          },
+          type: "GET",
+          data: dataStruct,
+          success: (res) => { // Changed to arrow function
+              this._populateMemories(res);
+          }
+      });
+    },
+    async _populateMemories(res) {
+      var memory;
+      var is_precise_flag;
+      if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+      // Google Maps API not loaded yet, wait for a bit and then try again
+          setTimeout(() => this._populateMemories(res), 1000); // Wait for 1 second before retrying
+          return;
+      }
+      const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+      res = JSON.parse(res)
+      for (memory in res) {
+          is_precise_flag = res[memory][0]['is_precise']
+          
+          if (is_precise_flag == "false"){ // These memories need to go into memory box, and thats it
+            this._populateMemoryBox(res[memory])
+          
+          }else{
+            if (res[memory].length > 1) {
+                var sharedObject = this._formatSharedMemories(res[memory])
+                this.createSharedMemoryMarker(sharedObject)
+            } else {
+                    const markerElement = new AdvancedMarkerElement({
+                    map: this.map,
+                    content: this.buildContent(res[memory][0]),
+                    position: new google.maps.LatLng(res[memory][0]["lat"], res[memory][0]["lon"]),
+                    title: res[memory]["title"],
+                });
+                this.markersArray.push(markerElement);
+
+                markerElement.addListener("click", () => {
+                    this.toggleHighlight(markerElement); // Assuming toggleHighlight is a method of the component
+                });
+            }
+          }
+      }
+    },
+    buildContent(memory) {
+      const content = document.createElement("div");
+      content.style.borderColor = "#d32121"; // Set the border color
+      content.style.borderWidth = "2px"; // Set the border width
+      content.style.borderStyle = "solid"; // Set the border style
+      content.classList.add("property");
+      content.innerHTML = `
         <div class="icon">
-            <i aria-hidden="true" title="${memory[0]["title"]}"></i>
-            <div class="smaller-font">
-              <div class="title"><strong>${memory[0].title}</strong></div>
-              <div class="description">${memory[0].descx}</div>
+            <i aria-hidden="true" class="fa-solid ${memory["icon"]}" title="${memory["title"]}"></i>
+        </div>
+          <div class="details">
+              <div class="price">${memory.title}</div>
+              <div class="address">${memory.descx}</div>
               <div class="features">
-                  <a href="${memory[0].link}" target="_blank">
-                      <i aria-hidden="true" class="fa fa-link fa-lg link"></i>
+              <div>
+                <a href="${memory.link}" target="_blank">
+                  <i aria-hidden="true" class="fa fa-link fa-lg link" title="bedroom"></i>
+                  <span class="fa-sr-only">bedroom</span>
+                  <span>View Memory</span>
+                  </a>
+              </div>
+            </div>
+          `;
+      return content;
+    },
+    toggleHighlight(markerView) {
+      if (markerView.content.classList.contains("highlight")) {
+        markerView.content.classList.remove("highlight");
+        markerView.zIndex = null;
+      } else {
+        markerView.content.classList.add("highlight");
+        markerView.zIndex = 1;
+      }
+    },
+    setMapOnAll(map) {
+      for (let i = 0; i < this.markersArray.length; i++) {
+        this.markersArray[i].setMap(map);
+      }
+    },
+    hideMarkers() {
+      this.setMapOnAll(null);
+    },
+    buildSharedContent(memories){
+      const content = document.createElement("div");
+
+      content.style.borderColor = "#d32121"; // Set the border color
+      content.style.borderWidth = "2px"; // Set the border width
+      content.style.borderStyle = "solid"; // Set the border style
+      content.classList.add("property");
+      var linkContent = this.buildLinks(memories["links"])
+      content.innerHTML = `
+        <div class="icon">
+            <i aria-hidden="true" class="fa-solid ${memories["icon"]}" title="${memories["title"]}"></i>
+        </div>
+          <div class="details" >
+              <div class="price">${memories.title}</div>
+              <div class="address">${memories.titles}</div>
+              <div class="features">${linkContent}</div>
+          </div>
+        </div>     
+          `;
+      return content;
+
+    },
+    buildLinks(links){
+      // Assuming memories.links is an array of URLs
+
+      // Initialize an empty string to hold the HTML
+      let htmlContent = '';
+
+      // Iterate over each link and append the HTML string for each link
+      links.forEach(link => {
+          htmlContent += `
+          <div style="display: inline-block; padding: 10px; margin-right: 10px;">
+                  <a href="${link}" target="_blank">
+                      <i aria-hidden="true" class="fa fa-link fa-lg link" title="bedroom"></i>
+                      <span class="fa-sr-only">bedroom</span>
                       <span>View Memory</span>
                   </a>
               </div>
-          </div>
+          `;
+      });
 
-    `;
-
-    newCell.appendChild(containerDiv);
-      },
-      clearTableRows(tableId) {
-        var table = document.getElementById(tableId);
-        if (!table) {
-            return;
+      return htmlContent;
+    },
+    _formatSharedMemories(sharedMemory){
+        var titles=[]
+        var memory
+        var links=[]
+        var ids=[]
+        var icon='fa-solid fa-user-group'
+        for (memory in sharedMemory){
+            titles.push(sharedMemory[memory]["title"])
+            links.push(sharedMemory[memory]["link"])
+            ids.push(sharedMemory[memory]["id"])
         }
 
-        // Loop to remove each row from the table
-        while (table.rows.length > 0) {
-            table.deleteRow(0);
+        var retunedObject = {
+            "icon": icon,
+            "title": "Shared Memories in "+sharedMemory[0]["location"],
+            "titles": titles,
+            "links": links,
+            "ids": ids,
+            "lat": sharedMemory[0]["lat"],
+            "lon": sharedMemory[0]["lon"],
+            "timestamp": sharedMemory[0]["timestamp"],
         }
+        return retunedObject
+
+    },
+    createSharedMemoryMarker(sharedObject){
+      const AdvancedMarkerElement = new google.maps.marker.AdvancedMarkerElement({
+              map: this.map,
+              content: this.buildSharedContent(sharedObject),
+              position: { lat: sharedObject["lat"], lng: sharedObject["lon"] },
+              title: sharedObject["title"],
+          })
+          this.markersArray.push(AdvancedMarkerElement)
+
+          AdvancedMarkerElement.addListener("click", () => {
+          this.toggleHighlight(AdvancedMarkerElement);
+          });
+
+    },
+    _populateMemoryBox(memory) {
+      var table = document.getElementById("memoryTable");
+      if (!table) return; // Exit if table doesn't exist (e.g., on mobile)
+      
+      var newRow = table.insertRow(-1); // Add the row at the end of the table
+      var newCell = newRow.insertCell(0); // Add a new cell to the row
+
+      // Create a container div inside the cell for better control of layout
+      const containerDiv = document.createElement("div");
+      containerDiv.className = "memory-container";
+
+      containerDiv.innerHTML = `
+          <div class="icon">
+              <i aria-hidden="true" title="${memory[0]["title"]}"></i>
+              <div class="smaller-font">
+                <div class="title"><strong>${memory[0].title}</strong></div>
+                <div class="description">${memory[0].descx}</div>
+                <div class="features">
+                    <a href="${memory[0].link}" target="_blank">
+                        <i aria-hidden="true" class="fa fa-link fa-lg link"></i>
+                        <span>View Memory</span>
+                    </a>
+                </div>
+            </div>
+
+      `;
+
+      newCell.appendChild(containerDiv);
+    },
+    clearTableRows(tableId) {
+      var table = document.getElementById(tableId);
+      if (!table) {
+          return;
+      }
+
+      // Loop to remove each row from the table
+      while (table.rows.length > 0) {
+          table.deleteRow(0);
       }
     }
   }
+}
+</script>
 
-  </script>
-  
-  <style>
-  .smaller-font {
-    font-size: small; /* Or any specific size you prefer */
-  }
+<style>
+.smaller-font {
+  font-size: small; /* Or any specific size you prefer */
+}
 
-  #memoryBox {
-    border: 2px solid lightblue;
-    background-color: white;
-    padding: 20px;
-    width: 10%;
-    margin: 20px auto;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+#memoryBox {
+  border: 2px solid lightblue;
+  background-color: white;
+  padding: 20px;
+  width: 10%;
+  margin: 20px auto;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 
-    display: flex;
-    position: absolute;
-    top: 130px;
-    /* Adjust as needed to place it at the desired location on the map */
-    right: 10px;
-    /* Adjust as needed */
-    z-index: 10;
-    /* Ensures it appears above the map */
-    font-family: 'Arial', sans-serif;
-  }
-  #memoryBoxTitle {
-    border: 2px solid lightblue;
-    background-color: white;
-    padding: 20px;
-    width: 10%;
-    margin: 10px auto;
-    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  position: absolute;
+  top: 130px;
+  /* Adjust as needed to place it at the desired location on the map */
+  right: 10px;
+  /* Adjust as needed */
+  z-index: 10;
+  /* Ensures it appears above the map */
+  font-family: 'Arial', sans-serif;
+}
+#memoryBoxTitle {
+  border: 2px solid lightblue;
+  background-color: white;
+  padding: 20px;
+  width: 10%;
+  margin: 10px auto;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 
-    position: absolute;
-    top: 50px;
-    /* Adjust as needed to place it at the desired location on the map */
-    right: 10px;
-    /* Adjust as needed */
-    z-index: 11;
-    /* Ensures it appears above the map */
-    font-family: 'Arial', sans-serif;
-    font-size: 200px;
-  }
-
-
-  #memoryTable tr:nth-child(even) {
-      background-color: #f2f2f2;
-  }
-
-  #memoryTable tr:hover {
-      background-color: #ddd;
-  }
+  position: absolute;
+  top: 50px;
+  /* Adjust as needed to place it at the desired location on the map */
+  right: 10px;
+  /* Adjust as needed */
+  z-index: 11;
+  /* Ensures it appears above the map */
+  font-family: 'Arial', sans-serif;
+  font-size: 200px;
+}
 
 
+#memoryTable tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
 
-  :root {
-  --building-color: #FF9800;
-  --house-color: #0288D1;
-  --shop-color: #7B1FA2;
-  --warehouse-color: #558B2F;
+#memoryTable tr:hover {
+    background-color: #ddd;
+}
+
+
+
+:root {
+--building-color: #FF9800;
+--house-color: #0288D1;
+--shop-color: #7B1FA2;
+--warehouse-color: #558B2F;
 }
 
 /*
@@ -584,5 +589,18 @@ body {
   border-top: 9px solid var(--shop-color);
 }
 
-  </style>
+#memoryBox {
+  display: none; /* Hide by default */
+}
+
+#memoryBoxTitle {
+  display: none; /* Hide by default */
+}
+
+@media (min-width: 769px) {
+  #memoryBox, #memoryBoxTitle {
+    display: block; /* Show on non-mobile devices */
+  }
+}
+</style>
   

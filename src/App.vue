@@ -1,8 +1,8 @@
 <template>
   <div id="app">
-    <GoogleMap />
+    <GoogleMap :isMobile="isMobile" />
     <Calandar />
-    <Timeline />
+    <Timeline v-if="!isMobile" />
   </div>
 </template>
 
@@ -18,19 +18,34 @@ export default {
     Calandar,
     Timeline,
   },
+  data() {
+    return {
+      isMobile: false
+    }
+  },
+  mounted() {
+    this.checkScreenSize();
+    window.addEventListener('resize', this.checkScreenSize);
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.checkScreenSize);
+  },
+  methods: {
+    checkScreenSize() {
+      this.isMobile = window.innerWidth <= 768;
+    }
+  }
 };
 </script>
 
 <style>
 * {
-       margin: 0; /* Setting all margins to 0 */
-   }
-/* #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-} */
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}
 </style>

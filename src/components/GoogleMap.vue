@@ -2,7 +2,7 @@
 
 <template>
   <div>
-    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <div id="map" style="width: 100%; height: 100vh;" class="full-screen-map"></div>
     <div v-if="!isMobile" id="memoryBoxTitle">
       <h2 style="font-family: Arial, sans-serif; font-size: 12px; text-decoration: underline; color: blue; text-align: center;">Memories on this date, but unknown location</h2>
     </div>
@@ -64,6 +64,7 @@ export default {
     },
     loadMap() {  
       this.map = new google.maps.Map(document.getElementById('map'), {
+        gestureHandling: 'greedy', // This enables one-finger panning
         zoom: 10,
         mapId: 'bc55fc2e7ebbdda0',
         center: { lat: 31.476737, lng: 34.4813380 }, 
@@ -388,7 +389,20 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+
 }
+
+
+.full-screen-map {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
 
 /*
  * Always set the map height explicitly to define the size of the div element
